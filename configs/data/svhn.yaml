@@ -1,0 +1,4 @@
+data:
+  data_dir: ./data
+  batch_size: 256
+  num_workers: 4
