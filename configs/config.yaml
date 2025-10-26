@@ -1,0 +1,4 @@
+defaults:
+  - data: svhn
+  - model: resnet18
+  - train: defaults
