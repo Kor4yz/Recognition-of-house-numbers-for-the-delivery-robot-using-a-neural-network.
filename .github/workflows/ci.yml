@@ -1,20 +1,53 @@
 name: CI
+
 on:
-  push: {branches: [main, master]}
+  push:
+    branches: [ main, master ]
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
+  lint-and-test:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: {python-version: '3.10'}
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
       - name: Cache pip
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-      - run: pip install -r requirements.txt
-      - run: pre-commit run --all-files
-      - run: pytest -q --maxfail=1 --disable-warnings
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # основная зависимость проекта
+          pip install -r requirements.txt
+          # гарантируем наличие инструментов в CI даже если их нет в requirements.txt
+          pip install pre-commit ruff mypy pytest pytest-cov
+
+      - name: Pre-commit (lint + format)
+        run: pre-commit run --all-files
+
+      - name: Type check (mypy)
+        run: mypy .
+
+      - name: Tests
+        env:
+          PYTHONWARNINGS: ignore
+        run: pytest -q --maxfail=1 --disable-warnings
