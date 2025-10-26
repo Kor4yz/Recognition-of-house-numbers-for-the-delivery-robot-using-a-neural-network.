@@ -33,12 +33,20 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
+      - name: Cache Torch data (datasets/models)
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/torch
+          key: ${{ runner.os }}-torch-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-torch-
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          # гарантируем наличие утилит
-          pip install pre-commit ruff mypy pytest pytest-cov
+          # утилиты на всякий случай (если их нет в requirements.txt)
+          pip install pre-commit mypy pytest pytest-cov
 
       - name: Pre-commit (lint + format) — skip if no config
         run: |
@@ -51,13 +59,17 @@ jobs:
             echo "No .pre-commit-config.yaml found — skipping pre-commit step."
           fi
 
-      # ВАЖНО: не сканируем src/, чтобы избежать дублей "models.resnet" и "src.models.resnet"
       - name: Type check (mypy)
         run: |
-          export MYPYPATH=$PWD/src  # чтобы импорты from src.* резолвились
+          # даём mypy видеть импорты вида "from src.*" без __init__.py
+          export MYPYPATH=$PWD
           mypy scripts app tests --ignore-missing-imports --explicit-package-bases --python-version 3.10
 
       - name: Run tests
         env:
+          # включаем src/ как namespace-package для pytest
+          PYTHONPATH: ${{ github.workspace }}
+          TORCH_HOME: ${{ runner.temp }}/torch
           PYTHONWARNINGS: ignore
-        run: pytest -q --maxfail=1 --disable-warnings
+        run: |
+          pytest -q --maxfail=1 --disable-warnings
