@@ -1,0 +1,2 @@
+docker build -t svhn-robot:latest .
+docker run -it --rm -p 8501:8501 svhn-robot:latest streamlit run app/app.py -- --checkpoint_path /app/checkpoints/best.ckpt
