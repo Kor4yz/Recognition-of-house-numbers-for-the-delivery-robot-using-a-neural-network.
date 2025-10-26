@@ -37,7 +37,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          # На случай, если их нет в requirements.txt
+          # гарантируем наличие нужных утилит
           pip install pre-commit ruff mypy pytest pytest-cov
 
       - name: Pre-commit (lint + format) — skip if no config
@@ -52,9 +52,12 @@ jobs:
           fi
 
       - name: Type check (mypy)
-        run: mypy .
+        run: |
+          # mypy не увидит src без __init__.py — укажем путь явно
+          export MYPYPATH=$PWD/src
+          mypy src scripts app tests --explicit-package-bases --ignore-missing-imports --python-version 3.10
 
-      - name: Tests
+      - name: Run tests
         env:
           PYTHONWARNINGS: ignore
         run: pytest -q --maxfail=1 --disable-warnings
