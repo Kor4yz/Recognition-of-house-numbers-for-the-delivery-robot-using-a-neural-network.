@@ -1,0 +1,4 @@
+trainer:
+  max_epochs: 20
+  accelerator: auto
+  devices: auto
